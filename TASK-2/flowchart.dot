@@ -1,0 +1,49 @@
+HAYAT AY
+250541055
+
+digraph OnlineAlisverisSepeti {
+    rankdir=LR;
+    node [shape=rectangle, style=rounded, fontname="Arial"];
+
+    Start [label="Başlangıç"];
+    LoginCheck [label="Kullanıcı girişi kontrolü"];
+    CategoryLoop [label="Ürün kategorilerinde gezinme (döngü)"];
+    SelectProduct [label="Ürün seçimi"];
+    StockCheck [label="Stok kontrolü"];
+    AddToCart [label="Ürünü sepete ekle"];
+    NoStock [label="Stokta yok, başka ürün seç"];
+    ViewEditCart [label="Sepeti görüntüle / düzenle (döngü)"];
+    DiscountCheck [label="İndirim kodu uygulanabilir"];
+    MinAmountCheck [label="Minimum 50 TL kontrolü"];
+    ShippingCheck [label="Kargo ücreti hesaplama"];
+    PaymentSelect [label="Ödeme yöntemi seçimi"];
+    PaymentProcess [label="Ödeme işlemi"];
+    OrderConfirm [label="Sipariş onayı"];
+    End [label="Bitiş"];
+
+    // Akışlar
+    Start -> LoginCheck;
+    LoginCheck -> CategoryLoop [label="Giriş başarılı"];
+    LoginCheck -> LoginCheck [label="Giriş başarısız, tekrar dene"];
+
+    CategoryLoop -> SelectProduct;
+    SelectProduct -> StockCheck;
+    StockCheck -> AddToCart [label="Stok var"];
+    StockCheck -> NoStock [label="Stok yok"];
+    NoStock -> CategoryLoop;
+
+    AddToCart -> ViewEditCart;
+    ViewEditCart -> DiscountCheck [label="Düzenleme tamamlandı"];
+    ViewEditCart -> ViewEditCart [label="Sepeti düzenlemeye devam et"];
+
+    DiscountCheck -> MinAmountCheck [label="İndirim geçerli veya yok"];
+    DiscountCheck -> MinAmountCheck;
+
+    MinAmountCheck -> ShippingCheck [label="Tutar ≥ 50 TL"];
+    MinAmountCheck -> ViewEditCart [label="Tutar < 50 TL, düzenle"];
+
+    ShippingCheck -> PaymentSelect;
+    PaymentSelect -> PaymentProcess;
+    PaymentProcess -> OrderConfirm;
+    OrderConfirm -> End;
+}
