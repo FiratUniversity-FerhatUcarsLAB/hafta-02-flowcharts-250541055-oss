@@ -1,0 +1,532 @@
+HAYAT AY
+250541055
+
+Bankadan para çekme algoritması oluştur.
+ATM’den para çekme — adım adım model (orta zorluk, döngüler + çoklu koşullar)
+
+Aşağıda verilen model; adım adım işlem akışı, gerekli durum/işlem değişkenleri, döngüler ve koşullar ile birlikte pseudocode (çalıştırılmaya yakın) ve test senaryoları içerir. Varsayımlarımı açıkça belirtiyorum — gerçek sistemde bunlar bankanın politikalarına göre değişir.
+
+Varsayımlar
+
+max_pin_attempts = 3
+
+cash_unit = 20 (çekilecek tutar 20 TL’nin katı olmalı)
+
+daily_limit (kullanıcının günlük nakit çekim limiti) örn. 2000 TL
+
+account_balance başlangıçta bir sayı (ör. 1500 TL)
+
+daily_withdrawn o gün çekilmiş toplam (başlangıç 0)
+
+Kart takılınca card_inserted = True. Kart bloke olursa card_blocked = True.
+
+ATM’de yeterli nakit olduğu varsayılacak (aksi belirtilirse ek kontrol eklenir).
+
+1) Temel değişkenler / durumlar
+card_inserted: bool
+card_blocked: bool
+pin_attempts: int
+pin_verified: bool
+account_balance: float
+daily_withdrawn: float
+daily_limit: float
+requested_amount: int
+cash_unit: int = 20
+max_pin_attempts: int = 3
+
+2) İşlem akışı — adım adım (özet)
+
+Kart takılır. (card_inserted = True)
+
+Eğer kart daha önceden bloke edilmişse -> kart iade edilir, işlem sonlanır.
+
+PIN istenir.
+
+PIN doğrulama döngüsü: en fazla 3 deneme; 3 hatada kart bloke edilir ve işlem biter.
+
+PIN doğrulandıktan sonra bakiye sorgulanır (ve/veya gösterilir).
+
+Kullanıcı çekilecek tutarı girer.
+
+requested_amount aşağıdaki koşullardan sırasıyla kontrol edilir:
+
+20 TL’nin katı mı?
+
+requested_amount <= account_balance? (yetersiz bakiye kontrolü)
+
+daily_withdrawn + requested_amount <= daily_limit? (günlük limit kontrolü)
+
+(İsteğe bağlı) ATM’de yeterli fiziki nakit var mı?
+
+Tüm koşullar sağlanıyorsa: para verilir, fiş çıkarılır, account_balance ve daily_withdrawn güncellenir.
+
+Kullanıcıya "Başka işlem yapmak istiyor musunuz?" sorusu sunulur. Eğer evet -> 5. adıma dön (PIN doğrulaması atlanır); hayır -> kart iade edilir, işlem sonlanır.
+
+Her hata durumunda uygun mesaj verilir ve kullanıcıya tekrar deneme imkânı veya işlemi sonlandırma sunulur.
+
+3) Pseudocode (çalıştırmaya yakın)
+function atm_session(card):
+    if card.is_blocked:
+        show("Kart bloke. Banka ile iletişime geçin.")
+        return
+
+    card_inserted = True
+    pin_attempts = 0
+    pin_verified = False
+
+    # PIN doğrulama döngüsü
+    while pin_attempts < max_pin_attempts and not pin_verified:
+        entered_pin = prompt("Lütfen PIN giriniz:")
+        if verify_pin(card, entered_pin):
+            pin_verified = True
+        else:
+            pin_attempts += 1
+            remaining = max_pin_attempts - pin_attempts
+            if remaining > 0:
+                show(f"Hatalı PIN. Kalan deneme: {remaining}")
+            else:
+                card.block()
+                show("Kart bloke edildi. Bankayı arayın.")
+                return
+
+    # PIN doğrulandıktan sonra işlem döngüsü
+    while True:
+        show("1) Bakiye sorgula  2) Para çek  3) Diğer işlemler  4) Çıkış")
+        choice = prompt_choice()
+        if choice == "1":
+            show(f"Güncel bakiye: {account_balance} TL")
+            continue  # başka işlem seçeneği
+        elif choice == "2":
+            show(f"Günlük kalan limit: {daily_limit - daily_withdrawn} TL")
+            requested_amount = prompt_int("Çekmek istediğiniz tutarı giriniz (TL):")
+            
+            # Koşul 1: 20 TL'nin katı olmalı
+            if requested_amount % cash_unit != 0:
+                show(f"Tutar {cash_unit} TL'nin katı olmalıdır.")
+                continue
+
+            # Koşul 2: Yetersiz bakiye
+            if requested_amount > account_balance:
+                show("Yetersiz bakiye.")
+                continue
+
+            # Koşul 3: Günlük limit
+            if daily_withdrawn + requested_amount > daily_limit:
+                show("Günlük limit aşımı.")
+                continue
+
+            # (İsteğe bağlı) ATM nakit kontrolü (örn. atm_cash >= requested_amount)
+            if atm_cash < requested_amount:
+                show("ATM'de yeterli nakit yok.")
+                continue
+
+            # Tüm kontroller geçildi: para ver ve fiş çıkar
+            dispense_cash(requested_amount)
+            print_receipt(account_balance_before=account_balance,
+                          withdrawn=requested_amount,
+                          new_balance = account_balance - requested_amount)
+            account_balance -= requested_amount
+            daily_withdrawn += requested_amount
+            atm_cash -= requested_amount
+
+            show("İşlem başarılı. Lütfen paranızı alın.")
+            
+            # Başka işlem sorusu
+            more = prompt_yes_no("Başka işlem yapmak ister misiniz? (E/H)")
+            if more == "E":
+                continue  # döngü; PIN doğrulama atlanır çünkü zaten doğrulandı
+            else:
+                eject_card()
+                show("Kart iade edildi. İyi günler.")
+                return
+
+        elif choice == "4" or choice == "Çıkış":
+            eject_card()
+            show("Kart iade edildi. İyi günler.")
+            return
+
+        else:
+            handle_other_choices_or_show_help()
+            continue
+
+4) Durum diyagramı (kısa açıklama)
+
+Başlangıç → Kart Takıldı?
+
+Hayır → Bekle
+
+Evet → Kart Bloke mi?
+
+Evet → Kart iade, bitir
+
+Hayır → PIN Döngüsü (<=3)
+
+Başarılı → Menü (Bakiye, Para Çek, Çıkış)
+
+3 Hata → Kart bloke, bitir
+
+Menü → Para Çek seçilmişse → Tutar gir
+
+Eğer %20 kurala uymuyorsa → hata, menüye dön
+
+Eğer bakiye yetersizse → hata, menüye dön
+
+Eğer günlük limit aşımıysa → hata, menüye dön
+
+Eğer ATM nakit yetersizse → hata, menüye dön
+
+Hepsi ok → para ver, fiş, bakiye güncelle, başka işlem sor → evet: menü; hayır: kart iade, bitir
+
+5) Kenar durumlar / hata mesajları (öneriler)
+
+PIN girişinde zaman aşımı: belirli süre içinde giriş yapılmazsa kart iade edilsin.
+
+Kart takıldıktan sonra işlem iptali: kullanıcı istediğinde kartı iade et.
+
+Eş zamanlı işlem: aynı hesap başka bir işlem yapıyorsa eş zamanlılık kontrolü (race condition).
+
+ATM nakit yetersizse kullanıcıya alternatif tutar öner (örn. en yakın 20 TL katı altında kalan).
+
+Ağ kesintisi / banka sistemine bağlanamama: işlem güvenli bir şekilde iptal edilmeli ve kart iade edilmeli.
+
+Fiş seçeneği: istemezse fiş basılmasın (ek seçenek).
+
+6) Test senaryoları (örnek)
+
+Başarılı çekim: bakiye 1500, günlük_limit 2000, çek 200 → başarılı, bakiye 1300, daily_withdrawn 200.
+
+PIN üç hatada bloklama: 3 yanlış PIN → kart bloke, işlem bitişi.
+
+20 TL katı değil: kullanıcı 50 TL ister → hata: "Tutar 20 TL'nin katı olmalı".
+
+Yetersiz bakiye: bakiye 100, istenen 200 → "Yetersiz bakiye".
+
+Günlük limit aşılıyor: daily_withdrawn 1900, istenen 200, daily_limit 2000 → "Günlük limit aşımı".
+
+ATM nakit yetersiz: atm_cash 100, istenen 200 → "ATM'de yeterli nakit yok".
+
+Başka işlem: başarılı çekim sonra "E" → menüye dön, başka işlemler yapılabilir.
+
+7) Notlar / Geliştirme önerileri
+
+Gerçek uygulamada PIN doğrulama ve hesap sorgulamaları banka sunucusuna istek gönderir; ağ hataları doğru ele alınmalı.
+
+Tüm para ve limit değerleri tam sayı (TL) ve doğrulama için integer kullanılmalı; küsurat olamaz.
+
+Güvenlik: PIN girişlerinde ekrate limitleri, ekran koruması, kötü amaçlı cihaz tespiti gibi mekanizmalar düşünülmeli.
+
+Loglama: her adım uygun şekilde loglanmalı (gizli bilgileri içermeden).
+
+UX: Hatalı giriş sonrası kullanıcıya neden reddedildiğini açıkça gösterip çözümler sunulmalı (örn. limit sebebiyle az miktar öner).
+
+İstersen bu modeli sana:
+
+akış diyagramı (grafik) olarak çizebilirim,
+
+veya verdiğim pseudocode’u gerçek bir Python/Java/C# uygulamasına dönüştürebilirim,
+
+ya da detaylı UML activity diagram ve sınıf modeli hazırlayabilirim.
+
+Hangi format istersin?
+
+Şunu dedin:
+psude kodu
+ChatGPT:
+
+Tabii 😊 İşte ATM para çekme işlemini döngüler ve çoklu koşullar içerecek şekilde, sade ama eksiksiz bir pseudocode (psödo kod) olarak yazılmış hali:
+
+💳 ATM PARA ÇEKME İŞLEMİ – PSEUDOCODE
+BAŞLA
+
+  card_inserted ← TRUE
+  card_blocked ← FALSE
+  pin_verified ← FALSE
+  pin_attempts ← 0
+  max_pin_attempts ← 3
+  account_balance ← 1500
+  daily_limit ← 2000
+  daily_withdrawn ← 0
+  cash_unit ← 20
+  atm_cash ← 10000
+
+  EĞER card_blocked = TRUE İSE
+      YAZ "Kart bloke. Lütfen bankayla iletişime geçin."
+      BİTİR
+  SON
+
+  // PIN DOĞRULAMA DÖNGÜSÜ
+  TEKRAR
+      entered_pin ← KULLANICIDAN "PIN giriniz:" AL
+      EĞER entered_pin DOĞRU İSE
+          pin_verified ← TRUE
+      DEĞİLSE
+          pin_attempts ← pin_attempts + 1
+          EĞER pin_attempts = max_pin_attempts İSE
+              card_blocked ← TRUE
+              YAZ "3 yanlış giriş! Kart bloke edildi."
+              BİTİR
+          DEĞİLSE
+              YAZ "Hatalı PIN. Kalan deneme: " + (max_pin_attempts - pin_attempts)
+          SON
+      SON
+  PIN DOĞRULANANA KADAR
+
+  // ANA İŞLEM DÖNGÜSÜ
+  TEKRAR
+      YAZ "1) Bakiye sorgula"
+      YAZ "2) Para çek"
+      YAZ "3) Çıkış"
+      secim ← KULLANICIDAN AL
+
+      EĞER secim = 1 İSE
+          YAZ "Bakiyeniz: " + account_balance + " TL"
+
+      DEĞİLSE EĞER secim = 2 İSE
+          requested_amount ← KULLANICIDAN "Çekmek istediğiniz tutar (TL):" AL
+
+          // KOŞUL 1: 20 TL’nin katı olmalı
+          EĞER requested_amount MOD cash_unit ≠ 0 İSE
+              YAZ "Tutar 20 TL’nin katı olmalıdır."
+              DEVAM ET
+          SON
+
+          // KOŞUL 2: Yetersiz bakiye
+          EĞER requested_amount > account_balance İSE
+              YAZ "Yetersiz bakiye."
+              DEVAM ET
+          SON
+
+          // KOŞUL 3: Günlük limit
+          EĞER daily_withdrawn + requested_amount > daily_limit İSE
+              YAZ "Günlük limit aşıldı."
+              DEVAM ET
+          SON
+
+          // KOŞUL 4: ATM nakit kontrolü
+          EĞER requested_amount > atm_cash İSE
+              YAZ "ATM'de yeterli nakit yok."
+              DEVAM ET
+          SON
+
+          // TÜM KOŞULLAR TAMAMSA PARA VER
+          account_balance ← account_balance - requested_amount
+          daily_withdrawn ← daily_withdrawn + requested_amount
+          atm_cash ← atm_cash - requested_amount
+          YAZ "Lütfen paranızı alın."
+          YAZ "Yeni bakiyeniz: " + account_balance + " TL"
+          YAZ "Fiş veriliyor..."
+
+          // BAŞKA İŞLEM SOR
+          cevap ← KULLANICIDAN "Başka işlem yapmak ister misiniz? (E/H):" AL
+          EĞER cevap = "E" İSE
+              DEVAM ET
+          DEĞİLSE
+              YAZ "Kart iade edildi. İyi günler."
+              ÇIK
+          SON
+
+      DEĞİLSE EĞER secim = 3 İSE
+          YAZ "Kart iade edildi. İyi günler."
+          ÇIK
+      SON
+
+  SÜREKLİ TEKRAR
+
+BİTİR
+
+🔍 Açıklamalar:
+
+Döngüler:
+
+PIN girişinde: PIN DOĞRULANANA KADAR
+
+Ana işlemde: SÜREKLİ TEKRAR (başka işlem yapmak ister misiniz kısmı)
+
+Koşullar:
+
+3 hatalı PIN denemesi
+
+20 TL katı kontrolü
+
+Yetersiz bakiye kontrolü
+
+Günlük limit kontrolü
+
+ATM nakit kontrolü
+
+İstersen bu pseudocode’u bir akış diyagramı (flowchart) olarak da görselleştirebilirim — adımlar ve koşullar kutularla gösterilmiş şekilde.
+İster misin onu da hazırlayayım?
+
+Şunu dedin:
+bana dot diline çevir
+ChatGPT:
+
+Tabii ✅
+Aşağıda yukarıdaki ATM para çekme işleminin DOT dili (Graphviz) formatına çevrilmiş hali var.
+Bu dosyayı .dot uzantısıyla kaydedip, örneğin Graphviz Online
+ gibi bir araçta açarsan akış diyagramını görsel olarak inceleyebilirsin.
+
+💳 ATM PARA ÇEKME İŞLEMİ — DOT DİLİ
+digraph ATM_Process {
+
+    rankdir=TB;
+    node [shape=rectangle, style=rounded, fontsize=11, fontname="Arial"];
+
+    start [label="Başla", shape=circle, style=filled, fillcolor=lightgrey];
+    card_inserted [label="Kart takıldı"];
+    card_blocked_check [label="Kart bloke mi?", shape=diamond];
+    blocked_exit [label="Kart bloke edildi\nBankayla iletişime geçin", shape=rectangle, style="rounded,filled", fillcolor=lightcoral];
+
+    pin_loop [label="PIN gir", shape=rectangle];
+    pin_correct [label="PIN doğru mu?", shape=diamond];
+    pin_retry [label="Hatalı PIN\nDeneme +1"];
+    card_blocked [label="3 hatalı giriş\nKart bloke edildi", shape=rectangle, style="rounded,filled", fillcolor=lightcoral];
+
+    menu [label="1) Bakiye sorgula\n2) Para çek\n3) Çıkış", shape=rectangle];
+    choice [label="Seçim", shape=diamond];
+
+    balance [label="Bakiye göster", shape=rectangle];
+
+    withdraw [label="Çekilecek tutarı gir", shape=rectangle];
+    check_20 [label="20 TL'nin katı mı?", shape=diamond];
+    check_balance [label="Yeterli bakiye var mı?", shape=diamond];
+    check_limit [label="Günlük limit içinde mi?", shape=diamond];
+    check_cash [label="ATM'de yeterli nakit var mı?", shape=diamond];
+
+    dispense [label="Para ver + fiş çıkar", shape=rectangle, style="filled", fillcolor=lightgreen];
+    update_balance [label="Bakiyeyi güncelle"];
+    another [label="Başka işlem yapmak ister misiniz?", shape=diamond];
+
+    exit [label="Kart iade edildi\nİyi günler", shape=rectangle, style="rounded,filled", fillcolor=lightgrey];
+
+    // Akışlar
+    start -> card_inserted -> card_blocked_check;
+    card_blocked_check -> blocked_exit [label="Evet"];
+    card_blocked_check -> pin_loop [label="Hayır"];
+
+    pin_loop -> pin_correct;
+    pin_correct -> menu [label="Evet"];
+    pin_correct -> pin_retry [label="Hayır"];
+    pin_retry -> card_blocked [label="3. hatalı giriş"];
+    pin_retry -> pin_loop [label="Tekrar dene"];
+
+    card_blocked -> blocked_exit;
+
+    menu -> choice;
+    choice -> balance [label="1"];
+    choice -> withdraw [label="2"];
+    choice -> exit [label="3"];
+
+    balance -> menu [label="Menüye dön"];
+
+    withdraw -> check_20;
+    check_20 -> check_balance [label="Evet"];
+    check_20 -> withdraw [label="Hayır"];
+
+    check_balance -> check_limit [label="Evet"];
+    check_balance -> withdraw [label="Hayır"];
+
+    check_limit -> check_cash [label="Evet"];
+    check_limit -> withdraw [label="Hayır"];
+
+    check_cash -> dispense [label="Evet"];
+    check_cash -> withdraw [label="Hayır"];
+
+    dispense -> update_balance -> another;
+
+    another -> menu [label="Evet"];
+    another -> exit [label="Hayır"];
+
+    blocked_exit -> exit;
+}
+
+🧭 Bu şema:
+
+Tüm döngüleri (PIN denemeleri, başka işlem sorusu) gösterir.
+
+Koşul düğümleri (elmaslar) "Evet / Hayır" etiketleriyle yönlendirilmiştir.
+
+Başarılı adımlar yeşil, hata/sonlandırıcı adımlar kırmızı veya gri renkle gösterilir.
+
+İstersen aynı şemayı daha sade (sadece para çekme kısmını içeren) veya daha detaylı (örneğin ATM hata durumlarıyla birlikte) olarak da çizebilirim.
+Hangisini istersin — sade, detaylı, yoksa tam sistem (tüm menüyle)?
+
+Şunu dedin:
+dot kodunu yazdır
+ChatGPT:
+
+Elbette 👍
+İşte ATM para çekme işleminin tam DOT kodu, doğrudan kopyalayıp .dot dosyası olarak kaydedebilirsin:
+
+digraph ATM_Process {
+
+    rankdir=TB;
+    node [shape=rectangle, style=rounded, fontsize=11, fontname="Arial"];
+
+    start [label="Başla", shape=circle, style=filled, fillcolor=lightgrey];
+    card_inserted [label="Kart takıldı"];
+    card_blocked_check [label="Kart bloke mi?", shape=diamond];
+    blocked_exit [label="Kart bloke edildi\nBankayla iletişime geçin", shape=rectangle, style="rounded,filled", fillcolor=lightcoral];
+
+    pin_loop [label="PIN gir", shape=rectangle];
+    pin_correct [label="PIN doğru mu?", shape=diamond];
+    pin_retry [label="Hatalı PIN\nDeneme +1"];
+    card_blocked [label="3 hatalı giriş\nKart bloke edildi", shape=rectangle, style="rounded,filled", fillcolor=lightcoral];
+
+    menu [label="1) Bakiye sorgula\n2) Para çek\n3) Çıkış", shape=rectangle];
+    choice [label="Seçim", shape=diamond];
+
+    balance [label="Bakiye göster", shape=rectangle];
+
+    withdraw [label="Çekilecek tutarı gir", shape=rectangle];
+    check_20 [label="20 TL'nin katı mı?", shape=diamond];
+    check_balance [label="Yeterli bakiye var mı?", shape=diamond];
+    check_limit [label="Günlük limit içinde mi?", shape=diamond];
+    check_cash [label="ATM'de yeterli nakit var mı?", shape=diamond];
+
+    dispense [label="Para ver + fiş çıkar", shape=rectangle, style="filled", fillcolor=lightgreen];
+    update_balance [label="Bakiyeyi güncelle"];
+    another [label="Başka işlem yapmak ister misiniz?", shape=diamond];
+
+    exit [label="Kart iade edildi\nİyi günler", shape=rectangle, style="rounded,filled", fillcolor=lightgrey];
+
+    // Akışlar
+    start -> card_inserted -> card_blocked_check;
+    card_blocked_check -> blocked_exit [label="Evet"];
+    card_blocked_check -> pin_loop [label="Hayır"];
+
+    pin_loop -> pin_correct;
+    pin_correct -> menu [label="Evet"];
+    pin_correct -> pin_retry [label="Hayır"];
+    pin_retry -> card_blocked [label="3. hatalı giriş"];
+    pin_retry -> pin_loop [label="Tekrar dene"];
+
+    card_blocked -> blocked_exit;
+
+    menu -> choice;
+    choice -> balance [label="1"];
+    choice -> withdraw [label="2"];
+    choice -> exit [label="3"];
+
+    balance -> menu [label="Menüye dön"];
+
+    withdraw -> check_20;
+    check_20 -> check_balance [label="Evet"];
+    check_20 -> withdraw [label="Hayır"];
+
+    check_balance -> check_limit [label="Evet"];
+    check_balance -> withdraw [label="Hayır"];
+
+    check_limit -> check_cash [label="Evet"];
+    check_limit -> withdraw [label="Hayır"];
+
+    check_cash -> dispense [label="Evet"];
+    check_cash -> withdraw [label="Hayır"];
+
+    dispense -> update_balance -> another;
+
+    another -> menu [label="Evet"];
+    another -> exit [label="Hayır"];
+
+    blocked_exit -> exit;
+}
