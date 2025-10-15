@@ -1,0 +1,47 @@
+HAYAT AY 
+250541055
+
+digraph SmartHomeSecurity {
+    rankdir=TB;
+    node [shape=box, style="rounded,filled", fillcolor="#FFFFFF"];
+
+    Start [label="Başlat: init_system()", shape=oval, fillcolor="#DFF0D8"];
+    ReadSensors [label="Tüm Sensörleri Oku\n(read_all_sensors())"];
+    Evaluate [label="Tehdit Değerlendir\n(evaluate...)\nThreat Score Hesapla"];
+    CheckHomeowner [label="Ev Sahibi Evde mi?\n(homeowner_is_home())"];
+    FalseAlarmCheck [label="Yanlış Alarm Kontrolü\n(apply_false_alarm_mitigation)"];
+    DetermineLevel [label="Alarm Seviyesi Belirle\n(0/1/2/3)"];
+    CameraAction [label="Kamera Aktive Et / Kayıt Başlat"];
+    TriggerAlarm [label="Alarmı Tetikle\n(sound_alarm_local, log, notify)", shape=diamond, style="filled", fillcolor="#F8D7DA"];
+    Verification [label="Doğrulama İsteği\n(send_verification_request_to_app)"];
+    AlarmOnLoop [label="Alarm ON: Bekle / Bildirimleri Tekrarla"];
+    ResetCheck [label="Sıfırlama Komutu?\n(reset_command_received?)", shape=diamond];
+    ResetAction [label="Alarmı Sıfırla\n(stop_local_alarm, log, notify)"];
+    Persist [label="Kayıt / Log Tut\n(persist_logs_periodically)"];
+    Sleep [label="Bekle\n(sleep SENSOR_POLL_INTERVAL)"];
+    Shutdown [label="Kapat (system_active=false)\nshutdown_procedures()", shape=oval];
+
+    // Akış
+    Start -> ReadSensors -> Evaluate -> CheckHomeowner;
+    CheckHomeowner -> FalseAlarmCheck;
+    FalseAlarmCheck -> DetermineLevel;
+    DetermineLevel -> CameraAction;
+    CameraAction -> TriggerAlarm;
+    TriggerAlarm -> Verification [label="false_alarm_possible", style="dashed"];
+    TriggerAlarm -> AlarmOnLoop [label="alarm_required"];
+    Verification -> TriggerAlarm [label="onay yok / timeout", style="dotted"];
+    Verification -> Persist [label="ev sahibi onayladı", style="dotted"];
+    AlarmOnLoop -> ResetCheck;
+    ResetCheck -> ResetAction [label="evet"];
+    ResetCheck -> Persist [label="hayır"];
+    ResetAction -> Persist;
+    Persist -> Sleep;
+    Sleep -> ReadSensors [label="Sürekli", lhead=cluster_0];
+
+    // Shutdown yolu
+    Start -> Shutdown [label="system_active=false", style="dotted"];
+
+    // Görsel vurgular
+    TriggerAlarm [color="#E3342F"];
+    ResetAction [color="#1F9D55"];
+}
