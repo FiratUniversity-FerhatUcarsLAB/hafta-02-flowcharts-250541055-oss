@@ -1,0 +1,64 @@
+HAYAT AY
+250541055
+
+digraph DersKayitSistemi {
+    rankdir=TB;
+    node [shape=rectangle, style=rounded, fontname="Arial"];
+
+    basla [label="Başla"];
+    giris [label="Öğrenci Girişi (No + Şifre)"];
+    kontrol_giris [label="Giriş Başarılı mı?", shape=diamond];
+    ders_liste [label="Ders Listesini Görüntüle"];
+    islem [label="İşlem Seç (1: Ekle, 2: Çıkar, 3: Onayla)"];
+    ders_ekle [label="Ders Ekle"];
+    kontenjan [label="Kontenjan Müsait mi?", shape=diamond];
+    on_kosul [label="Ön Koşul Sağlanmış mı?", shape=diamond];
+    zaman [label="Zaman Çakışması Var mı?", shape=diamond];
+    kredi [label="Toplam Kredi ≤ 35 mi?", shape=diamond];
+    ekle [label="Ders Eklendi"];
+    hata [label="Uygun Değil!"];
+    ders_cikar [label="Ders Çıkar"];
+    ozet [label="Kayıt Özeti Göster"];
+    gpa_kontrol [label="GPA < 2.5 mi?", shape=diamond];
+    danisman [label="Danışman Onayı Al"];
+    onay [label="Kayıt Onaylandı"];
+    red [label="Kayıt Reddedildi"];
+    bitir [label="Bitiş"];
+
+    basla -> giris -> kontrol_giris;
+    kontrol_giris -> ders_liste [label="Evet"];
+    kontrol_giris -> bitir [label="Hayır"];
+
+    ders_liste -> islem;
+
+    islem -> ders_ekle [label="1"];
+    islem -> ders_cikar [label="2"];
+    islem -> ozet [label="3"];
+
+    ders_ekle -> kontenjan;
+    kontenjan -> on_kosul [label="Evet"];
+    kontenjan -> hata [label="Hayır"];
+
+    on_kosul -> zaman [label="Evet"];
+    on_kosul -> hata [label="Hayır"];
+
+    zaman -> kredi [label="Hayır"]; 
+    zaman -> hata [label="Evet"];
+
+    kredi -> ekle [label="Evet"];
+    kredi -> hata [label="Hayır"];
+
+    ekle -> islem;
+    hata -> islem;
+    ders_cikar -> islem;
+
+    ozet -> gpa_kontrol;
+    gpa_kontrol -> danisman [label="Evet"];
+    gpa_kontrol -> onay [label="Hayır"];
+
+    danisman -> onay [label="Onay Verildi"];
+    danisman -> red [label="Reddedildi"];
+
+    onay -> bitir;
+    red -> bitir;
+}
