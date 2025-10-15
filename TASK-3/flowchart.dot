@@ -1,0 +1,111 @@
+HAYAT AY 
+250541055
+
+DOT (Graphviz) — Akış Diyagramı (her modül ayrı subgraph)
+
+Aşağıdaki DOT kodunu bir .dot dosyasına yapıştırıp dot -Tpng dosya.dot -o diyagram.png şeklinde render edebilirsiniz.
+
+digraph HastaneSistemi {
+  rankdir=TB;
+  node [fontname="Helvetica"];
+  edge [fontname="Helvetica"];
+
+  // Ana Menü
+  subgraph cluster_main {
+    label="Ana Menü";
+    style=rounded;
+    color=gray;
+    main_start [label="Başlangıç", shape=oval];
+    menu_choice [label="1: Randevu\n2: Tahlil\n3: Çıkış", shape=box];
+    main_end [label="Bitiş", shape=oval];
+  }
+
+  // Randevu Modülü
+  subgraph cluster_randevu {
+    label="Modül: Randevu Alma";
+    style=rounded;
+    color=lightblue;
+
+    r_start [label="Randevu Başla", shape=oval];
+    r_tc [label="TC Gir &\nKimlik Doğrula", shape=box];
+    r_tc_ok [label="Kimlik OK?", shape=diamond];
+    r_pol [label="Poliklinik Seçimi", shape=box];
+    r_doktor [label="Doktor Listesi", shape=box];
+    r_saatler [label="Uygun Saatleri Göster", shape=box];
+    r_saat_var [label="Uygun Saat Var?", shape=diamond];
+    r_secilen_saat [label="Saat Seçimi", shape=box];
+    r_onay [label="Onay? (E/H)", shape=diamond];
+    r_kaydet [label="Randevu Kaydet\n& SMS Gönder", shape=box];
+    r_bitis [label="Randevu Bitti", shape=oval];
+    r_hata [label="Kimlik Hatası", shape=box];
+  }
+
+  // Tahlil Modülü
+  subgraph cluster_tahlil {
+    label="Modül: Tahlil Sonuçları";
+    style=rounded;
+    color=lightgreen;
+
+    t_start [label="Tahlil Başla", shape=oval];
+    t_tc [label="TC Gir &\nKimlik Doğrula", shape=box];
+    t_tc_ok [label="Kimlik OK?", shape=diamond];
+    t_var_mi [label="Tahlil Var mı?", shape=diamond];
+    t_liste [label="Tahlil Listesini Göster", shape=box];
+    t_seçim [label="Tahlil Seçimi", shape=box];
+    t_hazir_mi [label="Sonuç Hazır mı?", shape=diamond];
+    t_gor [label="Sonucu Görüntüle", shape=box];
+    t_pdf [label="PDF İndir?", shape=diamond];
+    t_pdf_olustur [label="PDF Oluştur", shape=box];
+    t_bekle [label="Bekleme Mesajı", shape=box];
+    t_hata [label="Kimlik Hatası", shape=box];
+    t_bitis [label="Tahlil Bitti", shape=oval];
+  }
+
+  // Ana akış bağlantıları
+  main_start -> menu_choice;
+  menu_choice -> r_start [label="seçim=1"];
+  menu_choice -> t_start [label="seçim=2"];
+  menu_choice -> main_end [label="seçim=3"];
+
+  // Randevu akışı
+  r_start -> r_tc;
+  r_tc -> r_tc_ok;
+  r_tc_ok -> r_hata [label="Hayır"];
+  r_tc_ok -> r_pol [label="Evet"];
+  r_hata -> r_bitis;
+
+  r_pol -> r_doktor;
+  r_doktor -> r_saatler;
+  r_saatler -> r_saat_var;
+  r_saat_var -> r_secilen_saat [label="Evet"];
+  r_saat_var -> r_pol [label="Hayır"]; // tekrar seçim
+
+  r_secilen_saat -> r_onay;
+  r_onay -> r_kaydet [label="Evet"];
+  r_onay -> r_pol [label="Hayır"]; // kullanıcı tekrar seçmek ister
+  r_kaydet -> r_bitis;
+
+  // Tahlil akışı
+  t_start -> t_tc;
+  t_tc -> t_tc_ok;
+  t_tc_ok -> t_hata [label="Hayır"];
+  t_tc_ok -> t_var_mi [label="Evet"];
+  t_hata -> t_bitis;
+
+  t_var_mi -> t_liste [label="Evet"];
+  t_var_mi -> t_bekle [label="Hayır"];
+
+  t_liste -> t_seçim;
+  t_seçim -> t_hazir_mi;
+  t_hazir_mi -> t_gor [label="Evet"];
+  t_hazir_mi -> t_bekle [label="Hayır"];
+
+  t_gor -> t_pdf;
+  t_pdf -> t_pdf_olustur [label="Evet"];
+  t_pdf -> t_bitis [label="Hayır"];
+  t_pdf_olustur -> t_bitis;
+
+  // Modüller arası dönüş (ana menüye geri)
+  r_bitis -> menu_choice;
+  t_bitis -> menu_choice;
+}
