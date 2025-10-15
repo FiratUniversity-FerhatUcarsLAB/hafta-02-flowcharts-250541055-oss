@@ -1,0 +1,261 @@
+HAYAT AY
+250541055
+
+Online alış veriş sitesi algoritması oluştur
+Aşağıda “Online Alışveriş Sepet Sistemi” için tüm sürecin metinsel sistem açıklaması, ardından da dot (Graphviz) diliyle oluşturulmuş model kodu yer alıyor.
+Kod kısmını diyagram çizimi için kullanabilir, metin kısmı ise rapor veya proje açıklaması olarak kullanılabilir.
+
+🧩 Sistem Açıklaması (Metin)
+
+Bu sistem, bir e-ticaret platformunda kullanıcının ürünleri inceleyip, sepete ekleyerek ödeme yapabildiği süreci modellemektedir.
+Aşağıda sistemin işleyiş adımları ve içerdiği koşullar adım adım açıklanmıştır:
+
+Kullanıcı Girişi:
+Sistem, kullanıcının giriş yapıp yapmadığını kontrol eder.
+
+Eğer kullanıcı giriş yaptıysa sisteme erişim sağlanır.
+
+Eğer giriş yapılmadıysa kullanıcıdan giriş yapması veya kayıt olması istenir.
+
+Ürün Kategorilerinde Gezinme (Döngü):
+Kullanıcı farklı ürün kategorileri arasında gezinebilir.
+
+Her kategoriye tıkladığında sistem, o kategoriye ait ürün listesini gösterir.
+
+Kullanıcı ilgilenmediği sürece diğer kategorilere geçebilir (döngü devam eder).
+
+Ürün Seçimi ve Sepete Ekleme:
+Kullanıcı beğendiği ürünü sepete ekler.
+
+Ürün eklenmeden önce stok kontrolü yapılır.
+
+Eğer stok varsa ürün sepete eklenir.
+
+Stok yoksa kullanıcıya “Stokta yok” uyarısı gösterilir.
+
+Sepet Görüntüleme ve Düzenleme (Döngü):
+Kullanıcı sepetini görüntüleyebilir, ürün sayısını değiştirebilir veya ürünleri silebilir.
+
+Kullanıcı memnun olana kadar düzenleme yapabilir (döngüsel yapı).
+
+İndirim Kodu Uygulama (Koşul):
+Kullanıcı isterse indirim kodu girebilir.
+
+Kod geçerliyse indirim uygulanır.
+
+Kod geçersizse hata mesajı gösterilir.
+
+Minimum 50 TL Kontrolü (Koşul):
+Sepet tutarı 50 TL’nin altında ise sistem sipariş vermeye izin vermez ve kullanıcıya uyarı gösterir.
+
+50 TL ve üzeri olduğunda ödeme adımına geçilebilir.
+
+Kargo Ücreti Hesaplama (Koşul):
+
+Eğer sepet toplamı 200 TL’nin üzerindeyse kargo ücretsizdir.
+
+200 TL altındaysa kargo ücreti eklenir.
+
+Ödeme Yöntemi Seçimi (Koşul):
+Kullanıcı, ödeme yöntemi olarak “Kredi Kartı”, “Banka Kartı”, “Kapıda Ödeme” veya “Havale/EFT” gibi seçeneklerden birini seçer.
+
+Seçilen yönteme göre işlem yapılır.
+
+Sipariş Onayı:
+Ödeme tamamlandıktan sonra sistem siparişin başarıyla oluşturulduğunu bildirir.
+Kullanıcıya sipariş özeti ve tahmini teslim süresi gösterilir.
+
+⚙️ DOT (Graphviz) Model Kodu
+digraph OnlineAlisverisSepeti {
+    rankdir=LR;
+    node [shape=rectangle, style=rounded, fontname="Arial"];
+
+    Start [label="Başlangıç"];
+    LoginCheck [label="Kullanıcı girişi kontrolü"];
+    CategoryLoop [label="Ürün kategorilerinde gezinme (döngü)"];
+    AddProduct [label="Ürünü sepete ekle"];
+    StockCheck [label="Stok kontrolü"];
+    ViewEditCart [label="Sepeti görüntüle / düzenle (döngü)"];
+    DiscountCheck [label="İndirim kodu uygulanabilir"];
+    MinAmountCheck [label="Minimum 50 TL kontrolü"];
+    ShippingCalc [label="Kargo ücreti hesaplama"];
+    PaymentSelect [label="Ödeme yöntemi seçimi"];
+    OrderConfirm [label="Sipariş onayı"];
+    End [label="Bitiş"];
+
+    // Akışlar
+    Start -> LoginCheck;
+    LoginCheck -> CategoryLoop [label="Giriş başarılı"];
+    LoginCheck -> LoginCheck [label="Giriş başarısız, tekrar dene"];
+
+    CategoryLoop -> AddProduct;
+    AddProduct -> StockCheck;
+    StockCheck -> ViewEditCart [label="Stok mevcut"];
+    StockCheck -> CategoryLoop [label="Stok yok, başka ürün seç"];
+
+    ViewEditCart -> DiscountCheck;
+    DiscountCheck -> MinAmountCheck [label="İndirim uygula"];
+    DiscountCheck -> MinAmountCheck [label="İndirim yok"];
+
+    MinAmountCheck -> ShippingCalc [label="Tutar ≥ 50 TL"];
+    MinAmountCheck -> ViewEditCart [label="Tutar < 50 TL"];
+
+    ShippingCalc -> PaymentSelect [label="Kargo hesaplandı"];
+    PaymentSelect -> OrderConfirm;
+    OrderConfirm -> End;
+}
+
+
+İstersen bu modelden bir işlem akış diyagramı (flowchart) veya durum diyagramı (state diagram) da türetebiliriz.
+İster misin ben bu DOT kodundan görsel bir akış diyagramı da oluşturayım?
+
+Şunu dedin:
+bana pseudocode yaz
+ChatGPT:
+
+Elbette!
+Aşağıda Online Alışveriş Sepet Sistemi için tüm adımları içeren pseudocode (sözde kod) yer almaktadır.
+Bu kod, sistemin işleyişini açık, anlaşılır ve algoritmik biçimde gösterir.
+
+🧠 Online Alışveriş Sepet Sistemi – Pseudocode
+BAŞLA
+
+// Kullanıcı girişi
+EĞER kullanıcı_girişi_yapılmış_mı() = HAYIR İSE
+    GİRİŞ_YAP()
+SON
+
+// Ürün kategorilerinde gezinme
+TEKRARLA
+    kategori = KATEGORİ_SEÇ()
+    ürün_listesi = KATEGORİ_ÜRÜNLERİNİ_GÖSTER(kategori)
+    ürün = ÜRÜN_SEÇ(ürün_listesi)
+    
+    // Stok kontrolü
+    EĞER STOK_KONTROL(ürün) = VAR İSE
+        SEPETE_EKLE(ürün)
+        YAZ("Ürün sepete eklendi.")
+    DEĞİLSE
+        YAZ("Stokta yok, başka ürün seçiniz.")
+    SON
+
+    devam = KULLANICI_DEVAM_EDİYOR_MU()
+TAAKİ devam = HAYIR OLANA KADAR
+
+// Sepet görüntüleme ve düzenleme
+TEKRARLA
+    SEPETİ_GÖSTER()
+    işlem = SEPET_DÜZENLEME_İŞLEMİ_SEÇ()
+    
+    EĞER işlem = "ÜRÜN SİL" İSE
+        ÜRÜN_SİL_SEPETTEN()
+    EĞER işlem = "ADET DEĞİŞTİR" İSE
+        ADET_GÜNCELLE()
+    EĞER işlem = "DEVAM ET" İSE
+        ÇIKIŞ_DÖNGÜ
+    SON
+TAAKİ işlem = "DEVAM ET"
+
+// İndirim kodu
+EĞER KULLANICI_İNDİRİM_KODU_GİRMEK_İSTİYOR_MU() = EVET İSE
+    kod = İNDİRİM_KODU_AL()
+    EĞER KOD_GEÇERLİ_Mİ(kod) = EVET İSE
+        İNDİRİM_UYGULA(kod)
+        YAZ("İndirim uygulandı.")
+    DEĞİLSE
+        YAZ("Geçersiz indirim kodu.")
+    SON
+SON
+
+// Minimum tutar kontrolü
+EĞER SEPET_TOPLAMI() < 50 İSE
+    YAZ("Sipariş verebilmek için minimum 50 TL gereklidir.")
+    GİT SEPETİ_GÖSTER()
+SON
+
+// Kargo ücreti hesaplama
+EĞER SEPET_TOPLAMI() >= 200 İSE
+    KARGO_UCRETI = 0
+    YAZ("Kargo ücretsiz!")
+DEĞİLSE
+    KARGO_UCRETI = 29.99
+    YAZ("Kargo ücreti eklendi: 29.99 TL")
+SON
+
+// Ödeme yöntemi seçimi
+YAZ("Ödeme yöntemi seçiniz: 1-Kredi Kartı 2-Banka Kartı 3-Kapıda Ödeme 4-Havale")
+ödeme_yöntemi = ÖDEME_YÖNTEMİ_SEÇ()
+
+EĞER ödeme_yöntemi = GEÇERLİ İSE
+    ODEME_AL(ödeme_yöntemi)
+DEĞİLSE
+    YAZ("Geçersiz ödeme yöntemi.")
+    GİT ÖDEME_YÖNTEMİ_SEÇ()
+SON
+
+// Sipariş onayı
+SİPARİŞ_OLUŞTUR()
+YAZ("Sipariş başarıyla oluşturuldu. Teşekkür ederiz!")
+
+BİTİR
+
+
+İstersen bu pseudocode’u akış diyagramına veya dot modeline de çevirebilirim.
+Hangisini istersin — akış diyagramı (flowchart) mı yoksa açıklamalı algoritma formatı mı (örneğin Python’a benzer yapıda)?
+
+Şunu dedin:
+dot kodunu yaz
+ChatGPT:
+
+Tabii!
+Aşağıda “Online Alışveriş Sepet Sistemi” için yukarıdaki pseudocode’a karşılık gelen DOT (Graphviz) diliyle yazılmış akış diyagramı modeli yer alıyor.
+Bu kodu .dot uzantılı bir dosyaya kaydedip Graphviz
+ veya dreampuf.github.io/GraphvizOnline
+ üzerinden görselleştirebilirsin.
+
+digraph OnlineAlisverisSepeti {
+    rankdir=LR;
+    node [shape=rectangle, style=rounded, fontname="Arial"];
+
+    Start [label="Başlangıç"];
+    LoginCheck [label="Kullanıcı girişi kontrolü"];
+    CategoryLoop [label="Ürün kategorilerinde gezinme (döngü)"];
+    SelectProduct [label="Ürün seçimi"];
+    StockCheck [label="Stok kontrolü"];
+    AddToCart [label="Ürünü sepete ekle"];
+    NoStock [label="Stokta yok, başka ürün seç"];
+    ViewEditCart [label="Sepeti görüntüle / düzenle (döngü)"];
+    DiscountCheck [label="İndirim kodu uygulanabilir"];
+    MinAmountCheck [label="Minimum 50 TL kontrolü"];
+    ShippingCheck [label="Kargo ücreti hesaplama"];
+    PaymentSelect [label="Ödeme yöntemi seçimi"];
+    PaymentProcess [label="Ödeme işlemi"];
+    OrderConfirm [label="Sipariş onayı"];
+    End [label="Bitiş"];
+
+    // Akışlar
+    Start -> LoginCheck;
+    LoginCheck -> CategoryLoop [label="Giriş başarılı"];
+    LoginCheck -> LoginCheck [label="Giriş başarısız, tekrar dene"];
+
+    CategoryLoop -> SelectProduct;
+    SelectProduct -> StockCheck;
+    StockCheck -> AddToCart [label="Stok var"];
+    StockCheck -> NoStock [label="Stok yok"];
+    NoStock -> CategoryLoop;
+
+    AddToCart -> ViewEditCart;
+    ViewEditCart -> DiscountCheck [label="Düzenleme tamamlandı"];
+    ViewEditCart -> ViewEditCart [label="Sepeti düzenlemeye devam et"];
+
+    DiscountCheck -> MinAmountCheck [label="İndirim geçerli veya yok"];
+    DiscountCheck -> MinAmountCheck;
+
+    MinAmountCheck -> ShippingCheck [label="Tutar ≥ 50 TL"];
+    MinAmountCheck -> ViewEditCart [label="Tutar < 50 TL, düzenle"];
+
+    ShippingCheck -> PaymentSelect;
+    PaymentSelect -> PaymentProcess;
+    PaymentProcess -> OrderConfirm;
+    OrderConfirm -> End;
+}
