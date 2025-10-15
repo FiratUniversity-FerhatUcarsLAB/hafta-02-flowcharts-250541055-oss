@@ -1,0 +1,243 @@
+HAYAT AY
+250541055
+
+Hastane tahlil ve randevu sistemi algoritması oluştur 
+Hastane Randevu ve Tahlil Sistemi — Pseudocode + DOT akış diyagramı
+
+Aşağıda iki modül için ayrıntılı pseudocode (Türkçe) ve bunların ana menü ile birleştirilmiş DOT (Graphviz) kodu var. DOT içinde her modül ayrı subgraph cluster_... olarak düzenlendi; decision (koşul) düğümleri diamond, işlem düğümleri box şeklinde ayarlandı.
+
+1) Modül 1 — Randevu Alma (Pseudocode)
+Fonksiyon RANDEVU_AL():
+    // Hasta kimlik doğrulama
+    yaz("TC Kimlik No giriniz:")
+    tc = oku()
+    eğer NOT KIMLIK_DOGRULA(tc) ise:
+        yaz("Kimlik doğrulama başarısız. Tekrar deneyin veya destek ile iletişime geçin.")
+        döndür HATA
+
+    döngü:
+        // Poliklinik seçimi
+        poliklinikler = GET_POLIKLINIK_LISTESI()
+        yaz("Polikliniklerden birini seçin:")
+        yaz_liste(poliklinikler)
+        poliklinik = oku_seçim()
+
+        // Doktor listesi
+        doktorlar = GET_DOKTOR_LISTESI(poliklinik)
+        yaz("Doktor seçin:")
+        yaz_liste(doktorlar)
+        doktor = oku_seçim()
+
+        // Uygun saatleri göster
+        uygun_saatler = GET_UYGUN_SAATLER(doktor)
+        eğer uygun_saatler boş ise:
+            yaz("Seçilen doktor için uygun saat yok. Başka doktor/poliklinik seçin.")
+            devam // döngü devam eder
+        yaz("Uygun saatler:")
+        yaz_liste(uygun_saatler)
+        saat = oku_seçim()
+
+        // Onaylama
+        yaz("Seçiminiz: Poliklinik:", poliklinik, " Doktor:", doktor, " Saat:", saat)
+        yaz("Onaylıyor musunuz? (E/H)")
+        onay = oku()
+        eğer onay == "E" veya onay == "e" ise:
+            randevu_id = KAYDET_RANDEVU(tc, poliklinik, doktor, saat)
+            // SMS gönderimi (asenkron olarak kuyruğa atılabilir; burada doğrudan çağrı)
+            sms_metni = "Randevunuz onaylandı. ID:" + randevu_id + " " + poliklinik + " " + doktor + " " + saat
+            GONDER_SMS(tc, sms_metni)
+            yaz("Randevunuz onaylandı. SMS gönderildi.")
+            döndür BAŞARILI
+        aksi halde:
+            yaz("Randevu iptal edildi. Yeni seçim yapabilirsiniz.")
+            yaz("Başka işlem yapmak ister misiniz? (E/H)")
+            cevap = oku()
+            eğer cevap != "E" ve cevap != "e" ise:
+                döndür İPTAL
+            // aksi halde döngü başa döner
+
+2) Modül 2 — Tahlil Sonuçları (Pseudocode)
+Fonksiyon TAHLIL_SONUCLU_GOR():
+    // Hasta kimlik doğrulama
+    yaz("TC Kimlik No giriniz:")
+    tc = oku()
+    eğer NOT KIMLIK_DOGRULA(tc) ise:
+        yaz("Kimlik doğrulama başarısız. Tekrar deneyin veya destek ile iletişime geçin.")
+        döndür HATA
+
+    // Tahlil var mı kontrolü
+    tahlil_listesi = GET_TAHLIL_LISTESI(tc)
+    eğer tahlil_listesi boş ise:
+        yaz("Size ait tahlil kaydı bulunamadı.")
+        döndür YOK
+
+    yaz("Bulunan tahliller:")
+    yaz_liste(tahlil_listesi) // örn: [Hemogram #123, Biyokimya #456]
+
+    seçim = oku_seçim() // kullanıcı hangi tahlili görmek istediğini seçer
+    seçilen_tahlil = tahlil_listesi[seçim]
+
+    // Sonuç hazır mı kontrolü
+    eğer NOT TAHLIL_HAZIR_MI(seçilen_tahlil) ise:
+        yaz("Seçilen tahlil sonucu henüz hazır değil. Lütfen daha sonra tekrar kontrol edin.")
+        döndür BEKLEME
+    aksi halde:
+        sonuç = GET_TAHLIL_SONUCU(seçilen_tahlil)
+        yaz("Tahlil Sonuçları:")
+        yaz(sonuç.format_text())
+        yaz("PDF indirmek ister misiniz? (E/H)")
+        cevap = oku()
+        eğer cevap == "E" veya cevap == "e" ise:
+            pdf_dosya = OLUSTUR_PDF(sonuç)
+            yaz("PDF oluşturuldu:", pdf_dosya.yolu)
+            // (UI/CLI: dosya yolunu göster veya indirme linki üret)
+            döndür PDF_INDIRildi
+        döndür GORUNTULENDI
+
+3) Ana Menü ile Birleştirme (Pseudocode)
+Fonksiyon ANA_MENÜ():
+    döngü:
+        yaz("=== HASTANE SİSTEMİ ANA MENÜ ===")
+        yaz("1 - Randevu Al")
+        yaz("2 - Tahlil Sonucu Gör")
+        yaz("3 - Çıkış")
+        seçim = oku()
+
+        eğer seçim == "1" ise:
+            sonuç = RANDEVU_AL()
+            eğer sonuç == HATA ise:
+                yaz("Randevu modülünde hata oluştu.")
+        değilse eğer seçim == "2" ise:
+            sonuç = TAHLIL_SONUCLU_GOR()
+            eğer sonuç == HATA ise:
+                yaz("Tahlil modülünde hata oluştu.")
+        değilse eğer seçim == "3" ise:
+            yaz("Sistemden çıkılıyor. İyi günler.")
+            kır // döngüyü kır
+        değilse:
+            yaz("Geçersiz seçim. Tekrar deneyin.")
+
+        yaz("Başka işlem yapmak ister misiniz? (E/H)")
+        devam = oku()
+        eğer devam != "E" ve devam != "e" ise:
+            yaz("Oturum kapatılıyor.")
+            kır
+
+4) DOT (Graphviz) — Akış Diyagramı (her modül ayrı subgraph)
+
+Aşağıdaki DOT kodunu bir .dot dosyasına yapıştırıp dot -Tpng dosya.dot -o diyagram.png şeklinde render edebilirsiniz.
+
+digraph HastaneSistemi {
+  rankdir=TB;
+  node [fontname="Helvetica"];
+  edge [fontname="Helvetica"];
+
+  // Ana Menü
+  subgraph cluster_main {
+    label="Ana Menü";
+    style=rounded;
+    color=gray;
+    main_start [label="Başlangıç", shape=oval];
+    menu_choice [label="1: Randevu\n2: Tahlil\n3: Çıkış", shape=box];
+    main_end [label="Bitiş", shape=oval];
+  }
+
+  // Randevu Modülü
+  subgraph cluster_randevu {
+    label="Modül: Randevu Alma";
+    style=rounded;
+    color=lightblue;
+
+    r_start [label="Randevu Başla", shape=oval];
+    r_tc [label="TC Gir &\nKimlik Doğrula", shape=box];
+    r_tc_ok [label="Kimlik OK?", shape=diamond];
+    r_pol [label="Poliklinik Seçimi", shape=box];
+    r_doktor [label="Doktor Listesi", shape=box];
+    r_saatler [label="Uygun Saatleri Göster", shape=box];
+    r_saat_var [label="Uygun Saat Var?", shape=diamond];
+    r_secilen_saat [label="Saat Seçimi", shape=box];
+    r_onay [label="Onay? (E/H)", shape=diamond];
+    r_kaydet [label="Randevu Kaydet\n& SMS Gönder", shape=box];
+    r_bitis [label="Randevu Bitti", shape=oval];
+    r_hata [label="Kimlik Hatası", shape=box];
+  }
+
+  // Tahlil Modülü
+  subgraph cluster_tahlil {
+    label="Modül: Tahlil Sonuçları";
+    style=rounded;
+    color=lightgreen;
+
+    t_start [label="Tahlil Başla", shape=oval];
+    t_tc [label="TC Gir &\nKimlik Doğrula", shape=box];
+    t_tc_ok [label="Kimlik OK?", shape=diamond];
+    t_var_mi [label="Tahlil Var mı?", shape=diamond];
+    t_liste [label="Tahlil Listesini Göster", shape=box];
+    t_seçim [label="Tahlil Seçimi", shape=box];
+    t_hazir_mi [label="Sonuç Hazır mı?", shape=diamond];
+    t_gor [label="Sonucu Görüntüle", shape=box];
+    t_pdf [label="PDF İndir?", shape=diamond];
+    t_pdf_olustur [label="PDF Oluştur", shape=box];
+    t_bekle [label="Bekleme Mesajı", shape=box];
+    t_hata [label="Kimlik Hatası", shape=box];
+    t_bitis [label="Tahlil Bitti", shape=oval];
+  }
+
+  // Ana akış bağlantıları
+  main_start -> menu_choice;
+  menu_choice -> r_start [label="seçim=1"];
+  menu_choice -> t_start [label="seçim=2"];
+  menu_choice -> main_end [label="seçim=3"];
+
+  // Randevu akışı
+  r_start -> r_tc;
+  r_tc -> r_tc_ok;
+  r_tc_ok -> r_hata [label="Hayır"];
+  r_tc_ok -> r_pol [label="Evet"];
+  r_hata -> r_bitis;
+
+  r_pol -> r_doktor;
+  r_doktor -> r_saatler;
+  r_saatler -> r_saat_var;
+  r_saat_var -> r_secilen_saat [label="Evet"];
+  r_saat_var -> r_pol [label="Hayır"]; // tekrar seçim
+
+  r_secilen_saat -> r_onay;
+  r_onay -> r_kaydet [label="Evet"];
+  r_onay -> r_pol [label="Hayır"]; // kullanıcı tekrar seçmek ister
+  r_kaydet -> r_bitis;
+
+  // Tahlil akışı
+  t_start -> t_tc;
+  t_tc -> t_tc_ok;
+  t_tc_ok -> t_hata [label="Hayır"];
+  t_tc_ok -> t_var_mi [label="Evet"];
+  t_hata -> t_bitis;
+
+  t_var_mi -> t_liste [label="Evet"];
+  t_var_mi -> t_bekle [label="Hayır"];
+
+  t_liste -> t_seçim;
+  t_seçim -> t_hazir_mi;
+  t_hazir_mi -> t_gor [label="Evet"];
+  t_hazir_mi -> t_bekle [label="Hayır"];
+
+  t_gor -> t_pdf;
+  t_pdf -> t_pdf_olustur [label="Evet"];
+  t_pdf -> t_bitis [label="Hayır"];
+  t_pdf_olustur -> t_bitis;
+
+  // Modüller arası dönüş (ana menüye geri)
+  r_bitis -> menu_choice;
+  t_bitis -> menu_choice;
+}
+
+Kısa Açıklama / Notlar
+
+KIMLIK_DOGRULA(tc), GET_POLIKLINIK_LISTESI(), GET_DOKTOR_LISTESI(poliklinik), GET_UYGUN_SAATLER(doktor), KAYDET_RANDEVU(...), GONDER_SMS(...), GET_TAHLIL_LISTESI(tc), TAHLIL_HAZIR_MI(...), GET_TAHLIL_SONUCU(...), OLUSTUR_PDF(...) gibi fonksiyonlar gerçek sistemde veri tabanı, SMS servisleri ve PDF kütüphaneleri ile entegre olacak şekilde implement edilmelidir.
+
+SMS gönderimi ve PDF oluşturma gibi ağır/IO işlemleri asenkron kuyruğa atılarak ölçeklendirilebilir.
+
+Güvenlik: TC doğrulama, kimlik doğrulama adımlarında rate-limit, logging ve erişim kontrolleri uygulanmalı; tahlil sonuçları hassas sağlık verisi olduğu için veri şifreleme ve yetkilendirme gereklidir.
+
+DOT dosyasını görselleştirmek için Graphviz (dot) kullanabilirsiniz.
