@@ -1,0 +1,173 @@
+HAYAT AY 
+250541055
+
+Akıllı ev güvenlik sistemi algoritması 
+aşağıda akıllı ev güvenlik sistemi için istenen gereksinimleri karşılayan sonsuz döngü (7/24) yaklaşımıyla hem pseudocode hem de DOT (Graphviz) akış diyagramı kodu yer alıyor. DOT’ta sonsuz döngüyü geri ok ile ve Sürekli etiketiyle gösterdim. İstersen bunları doğrudan Graphviz / online DOT render araçlarına yapıştırıp görselleştirebilirsin.
+
+Pseudocode (Türkçe, açıklamalı)
+// Başlangıç / Başlatma
+init_system():
+    load_config()
+    connect_all_sensors()         // hareket, kapı/pencere, kamera, vb.
+    connect_notification_services() // SMS, App, Email
+    system_active = true
+    alarm_state = "OFF"           // OFF / ON
+    alarm_level = 0               // 0 yok, 1 düşük, 2 orta, 3 yüksek
+    false_alarm_timer = 0
+
+// Ana döngü (Sürekli)
+main_loop():
+    init_system()
+Sürekli:                          // DOT'ta geri ok ile işaretlenecek
+    while system_active == true:   // Sonsuz/kalıcı çalışma koşulu
+        // 1) Tüm sensörleri oku
+        sensor_readings = read_all_sensors()
+            // örn: motion = sensor_readings.motion, doors = sensor_readings.doors, cameras = sensor_readings.cameras
+
+        // 2) Threat (tehdit) tespiti
+        threat_score = 0
+        if motion.detected:
+            threat_score += evaluate_motion_intensity(motion)
+        if door_open_unexpected(doors):
+            threat_score += evaluate_entry_risk(doors)
+        if camera.detects_person:
+            threat_score += evaluate_camera_confidence(camera)
+        // diğer sensör değerlendirmeleri...
+
+        // 3) Yanlış alarm kontrolü (ev sahibi evde mi? izinli durum?)
+        if homeowner_is_home():
+            // ev sahibi evdeyse, düşük duyarlılık / yanlış alarm koruması uygula
+            threat_score = apply_false_alarm_mitigation(threat_score)
+            false_alarm_possible = (threat_score < FALSE_ALARM_THRESHOLD)
+        else:
+            false_alarm_possible = false
+
+        // 4) Alarm seviyesi belirle
+        if threat_score >= HIGH_THRESHOLD:
+            alarm_level = 3
+        else if threat_score >= MEDIUM_THRESHOLD:
+            alarm_level = 2
+        else if threat_score > 0:
+            alarm_level = 1
+        else:
+            alarm_level = 0
+
+        // 5) Kamera aktivasyonu (detaya göre)
+        if alarm_level >= 1 and not camera.is_active():
+            camera.activate(record=true, stream=true)
+
+        // 6) Alarmı tetikle / yükselt
+        if alarm_level > 0 and not alarm_state == "ON":
+            if not false_alarm_possible:
+                alarm_state = "ON"
+                alarm_trigger_time = now()
+                sound_alarm_local()
+                log_event("ALARM_TRIGGERED", alarm_level, sensor_readings)
+                send_notifications(alarm_level, sensor_readings)
+            else:
+                // şüpheli ama ev sahibi evde -> önce uyarı / doğrulama isteği
+                send_verification_request_to_app(sensor_readings)
+                if homeowner_confirms_safe_within(timeout=VERIFICATION_TIMEOUT):
+                    log_event("VERIFIED_SAFE_BY_HOMEOWNER")
+                    // alarm tetiklenmez
+                else:
+                    // onay gelmedi -> alarmı yükselt
+                    alarm_state = "ON"
+                    sound_alarm_local()
+                    send_notifications(alarm_level, sensor_readings)
+
+        // 7) Eğer alarm zaten açıksa: devam veya sıfırlama kontrolü
+        if alarm_state == "ON":
+            if reset_command_received_from_authorized_user():
+                alarm_state = "OFF"
+                alarm_level = 0
+                camera.deactivate_if_not_required()
+                stop_local_alarm()
+                log_event("ALARM_RESET_BY_USER", now())
+                send_notifications_reset_confirm()
+            else:
+                // alarmı sürdür, periyodik bildirim/güncelleme yolla
+                if time_since(alarm_trigger_time) mod NOTIFICATION_INTERVAL == 0:
+                    send_notifications(alarm_level, latest_snapshot())
+
+        // 8) Kayıt ve bekleme (debouncing / sensör döngü bekleme)
+        persist_logs_periodically()
+        sleep(SENSOR_POLL_INTERVAL)   // kısa bekleme, sonra tekrar oku (döngü devam)
+
+    // system_active false olursa sistem kapanır
+    shutdown_procedures()
+
+Açıklayıcı notlar (kısa)
+
+FALSE_ALARM_THRESHOLD, MEDIUM_THRESHOLD, HIGH_THRESHOLD gibi eşikler konfigürasyondan gelir ve sistem öğrenmeye/ayarlamaya açıktır.
+
+homeowner_is_home(): yerel varlık algılama (telefon bağlı mı, geofence, manuel 'Evde' modu).
+
+send_notifications(...) üç kanalda (SMS, app push, e-mail) çalışır; kritik seviyelerde önceliklendirme yapılır.
+
+reset_command_received_from_authorized_user() yetkili kullanıcı doğrulaması (2FA / PIN) içerir.
+
+Döngü sleep(SENSOR_POLL_INTERVAL) ile kısa aralıkta tekrar eder — gerçek zamanlılık gereksinimine göre 100 ms — birkaç saniye arasında ayarlanır.
+
+DOT (Graphviz) — Sonsuz döngü akış diyagramı
+
+Aşağıdaki DOT kodunu Graphviz ile render ettiğinde akış diyagramı görüntüsü alırsın. Sonsuz döngüyü Sürekli etiketiyle ve geri ok ile gösterdim.
+
+digraph SmartHomeSecurity {
+    rankdir=TB;
+    node [shape=box, style="rounded,filled", fillcolor="#FFFFFF"];
+
+    Start [label="Başlat: init_system()", shape=oval, fillcolor="#DFF0D8"];
+    ReadSensors [label="Tüm Sensörleri Oku\n(read_all_sensors())"];
+    Evaluate [label="Tehdit Değerlendir\n(evaluate...)\nThreat Score Hesapla"];
+    CheckHomeowner [label="Ev Sahibi Evde mi?\n(homeowner_is_home())"];
+    FalseAlarmCheck [label="Yanlış Alarm Kontrolü\n(apply_false_alarm_mitigation)"];
+    DetermineLevel [label="Alarm Seviyesi Belirle\n(0/1/2/3)"];
+    CameraAction [label="Kamera Aktive Et / Kayıt Başlat"];
+    TriggerAlarm [label="Alarmı Tetikle\n(sound_alarm_local, log, notify)", shape=diamond, style="filled", fillcolor="#F8D7DA"];
+    Verification [label="Doğrulama İsteği\n(send_verification_request_to_app)"];
+    AlarmOnLoop [label="Alarm ON: Bekle / Bildirimleri Tekrarla"];
+    ResetCheck [label="Sıfırlama Komutu?\n(reset_command_received?)", shape=diamond];
+    ResetAction [label="Alarmı Sıfırla\n(stop_local_alarm, log, notify)"];
+    Persist [label="Kayıt / Log Tut\n(persist_logs_periodically)"];
+    Sleep [label="Bekle\n(sleep SENSOR_POLL_INTERVAL)"];
+    Shutdown [label="Kapat (system_active=false)\nshutdown_procedures()", shape=oval];
+
+    // Akış
+    Start -> ReadSensors -> Evaluate -> CheckHomeowner;
+    CheckHomeowner -> FalseAlarmCheck;
+    FalseAlarmCheck -> DetermineLevel;
+    DetermineLevel -> CameraAction;
+    CameraAction -> TriggerAlarm;
+    TriggerAlarm -> Verification [label="false_alarm_possible", style="dashed"];
+    TriggerAlarm -> AlarmOnLoop [label="alarm_required"];
+    Verification -> TriggerAlarm [label="onay yok / timeout", style="dotted"];
+    Verification -> Persist [label="ev sahibi onayladı", style="dotted"];
+    AlarmOnLoop -> ResetCheck;
+    ResetCheck -> ResetAction [label="evet"];
+    ResetCheck -> Persist [label="hayır"];
+    ResetAction -> Persist;
+    Persist -> Sleep;
+    Sleep -> ReadSensors [label="Sürekli", lhead=cluster_0];
+
+    // Shutdown yolu
+    Start -> Shutdown [label="system_active=false", style="dotted"];
+
+    // Görsel vurgular
+    TriggerAlarm [color="#E3342F"];
+    ResetAction [color="#1F9D55"];
+}
+
+Nasıl kullanırsın / öneriler
+
+DOT kodunu (ör. graphvizonline veya webgraphviz.com ya da dot -Tpng -o diagram.png file.dot) ile görselleştir.
+
+Pseudocode’u bir servis/daemon içinde gerçek koda çevirirken:
+
+Sensör okumalarını asenkron veya event-driven (interrupt) modelle birleştir (gerektiğinde).
+
+Kritik yollar için retry, backoff ve güvenlik (şifreleme, TLS) ekle.
+
+Test için simülasyon modu (sensor simulator) ekle.
+
+Yanlış alarm azaltmak için ML tabanlı sınıflandırıcı kullanılabilir; eşikler dinamik ayarlanır
