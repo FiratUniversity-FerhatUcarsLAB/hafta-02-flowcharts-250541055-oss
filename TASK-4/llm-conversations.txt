@@ -1,0 +1,154 @@
+HAYAT AY
+250541055
+
+Üniversite kayıt sistemi algoritması oluştur.
+“Üniversite Ders Kayıt Sistemi” görevi, çok sayıda kontrol mekanizması, koşul, döngü ve karar noktası içeriyor — yani oldukça kapsamlı bir sistem modelidir.
+Aşağıda sana önce pseudocode (sözde kod), ardından .dot (Graphviz) biçiminde akış diyagramı kodunu veriyorum.
+Sonrasında da sistemin metinsel açıklamasını ekleyeceğim.
+
+🧩 1. Pseudocode
+Başla
+    Girdi: öğrenci_no, şifre
+    Eğer giriş_başarılıysa:
+        DersListesiniGörüntüle()
+
+        ToplamKredi = 0
+        SeçilenDersler = []
+
+        Tekrar:
+            Kullanıcıdan işlem al (1: Ders ekle, 2: Ders çıkar, 3: Kayıt Onayla)
+            
+            Eğer işlem == 1 ise:
+                DersSeç()
+                Eğer kontenjan_müsait_mi(ders):
+                    Eğer on_kosul_saglanmis_mi(ders):
+                        Eğer zaman_cakismasi_yok_mu(ders, SeçilenDersler):
+                            Eğer ToplamKredi + ders.kredi ≤ 35:
+                                SeçilenDersler’e ekle
+                                ToplamKredi += ders.kredi
+                            Değilse:
+                                Yazdır "Kredi limiti aşıldı!"
+                        Değilse:
+                            Yazdır "Zaman çakışması!"
+                    Değilse:
+                        Yazdır "Ön koşul dersi alınmamış!"
+                Değilse:
+                    Yazdır "Kontenjan dolu!"
+            
+            Eğer işlem == 2 ise:
+                DersSil(SeçilenDersler)
+                ToplamKredi -= silinen_ders.kredi
+
+        Kayıt özeti göster (SeçilenDersler, ToplamKredi)
+
+        Eğer GPA < 2.5 ise:
+            Danışman onayı iste
+            Eğer onay_verildi:
+                Kayıt onayla
+            Değilse:
+                Yazdır "Kayıt reddedildi"
+        Aksi halde:
+            Kayıt onayla
+    Aksi halde:
+        Yazdır "Giriş başarısız!"
+Bitir
+
+⚙️ 2. DOT (Graphviz) Diyagram Kodu
+digraph DersKayitSistemi {
+    rankdir=TB;
+    node [shape=rectangle, style=rounded, fontname="Arial"];
+
+    basla [label="Başla"];
+    giris [label="Öğrenci Girişi (No + Şifre)"];
+    kontrol_giris [label="Giriş Başarılı mı?", shape=diamond];
+    ders_liste [label="Ders Listesini Görüntüle"];
+    islem [label="İşlem Seç (1: Ekle, 2: Çıkar, 3: Onayla)"];
+    ders_ekle [label="Ders Ekle"];
+    kontenjan [label="Kontenjan Müsait mi?", shape=diamond];
+    on_kosul [label="Ön Koşul Sağlanmış mı?", shape=diamond];
+    zaman [label="Zaman Çakışması Var mı?", shape=diamond];
+    kredi [label="Toplam Kredi ≤ 35 mi?", shape=diamond];
+    ekle [label="Ders Eklendi"];
+    hata [label="Uygun Değil!"];
+    ders_cikar [label="Ders Çıkar"];
+    ozet [label="Kayıt Özeti Göster"];
+    gpa_kontrol [label="GPA < 2.5 mi?", shape=diamond];
+    danisman [label="Danışman Onayı Al"];
+    onay [label="Kayıt Onaylandı"];
+    red [label="Kayıt Reddedildi"];
+    bitir [label="Bitiş"];
+
+    basla -> giris -> kontrol_giris;
+    kontrol_giris -> ders_liste [label="Evet"];
+    kontrol_giris -> bitir [label="Hayır"];
+
+    ders_liste -> islem;
+
+    islem -> ders_ekle [label="1"];
+    islem -> ders_cikar [label="2"];
+    islem -> ozet [label="3"];
+
+    ders_ekle -> kontenjan;
+    kontenjan -> on_kosul [label="Evet"];
+    kontenjan -> hata [label="Hayır"];
+
+    on_kosul -> zaman [label="Evet"];
+    on_kosul -> hata [label="Hayır"];
+
+    zaman -> kredi [label="Hayır"]; 
+    zaman -> hata [label="Evet"];
+
+    kredi -> ekle [label="Evet"];
+    kredi -> hata [label="Hayır"];
+
+    ekle -> islem;
+    hata -> islem;
+    ders_cikar -> islem;
+
+    ozet -> gpa_kontrol;
+    gpa_kontrol -> danisman [label="Evet"];
+    gpa_kontrol -> onay [label="Hayır"];
+
+    danisman -> onay [label="Onay Verildi"];
+    danisman -> red [label="Reddedildi"];
+
+    onay -> bitir;
+    red -> bitir;
+}
+
+🧠 3. Sistem Açıklaması (Metin Biçiminde)
+
+Üniversite Ders Kayıt Sistemi, öğrencilerin ders seçim süreçlerini dijital ortamda gerçekleştirmelerini sağlayan bir kontrol mekanizmasıdır.
+Sistem şu adımlarla işler:
+
+Öğrenci Girişi:
+Öğrenci numarası ve şifresiyle kimlik doğrulaması yapılır. Giriş başarısızsa süreç sonlanır.
+
+Ders Listesi Görüntüleme:
+Öğrenci, mevcut dönemde açılan tüm dersleri görebilir.
+
+Ders İşlemleri (Döngü):
+Öğrenci ders ekleme, çıkarma veya kaydı onaylama işlemleri arasında seçim yapar.
+
+Ders eklerken şu kontroller yapılır:
+
+Kontenjan uygun mu?
+
+Ön koşul dersleri tamamlanmış mı?
+
+Ders saati başka dersle çakışıyor mu?
+
+Toplam kredi 35’i aşıyor mu?
+Tüm koşullar sağlanırsa ders listeye eklenir.
+
+Ders çıkarma işlemi de mümkündür.
+
+Kayıt Özeti ve Onay:
+Öğrencinin seçtiği dersler ve toplam kredisi görüntülenir.
+
+Danışman Onayı (Koşullu):
+Eğer öğrencinin ortalaması (GPA) 2.5’in altındaysa kayıt işlemi danışman onayına bağlıdır.
+Onay verilirse kayıt tamamlanır; aksi halde reddedilir.
+
+Sistem Sonu:
+Kayıt tamamlandığında veya reddedildiğinde işlem biter.
