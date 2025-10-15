@@ -1,0 +1,75 @@
+HAYAT AY 
+250541055
+
+digraph ATM_Process {
+
+    rankdir=TB;
+    node [shape=rectangle, style=rounded, fontsize=11, fontname="Arial"];
+
+    start [label="Başla", shape=circle, style=filled, fillcolor=lightgrey];
+    card_inserted [label="Kart takıldı"];
+    card_blocked_check [label="Kart bloke mi?", shape=diamond];
+    blocked_exit [label="Kart bloke edildi\nBankayla iletişime geçin", shape=rectangle, style="rounded,filled", fillcolor=lightcoral];
+
+    pin_loop [label="PIN gir", shape=rectangle];
+    pin_correct [label="PIN doğru mu?", shape=diamond];
+    pin_retry [label="Hatalı PIN\nDeneme +1"];
+    card_blocked [label="3 hatalı giriş\nKart bloke edildi", shape=rectangle, style="rounded,filled", fillcolor=lightcoral];
+
+    menu [label="1) Bakiye sorgula\n2) Para çek\n3) Çıkış", shape=rectangle];
+    choice [label="Seçim", shape=diamond];
+
+    balance [label="Bakiye göster", shape=rectangle];
+
+    withdraw [label="Çekilecek tutarı gir", shape=rectangle];
+    check_20 [label="20 TL'nin katı mı?", shape=diamond];
+    check_balance [label="Yeterli bakiye var mı?", shape=diamond];
+    check_limit [label="Günlük limit içinde mi?", shape=diamond];
+    check_cash [label="ATM'de yeterli nakit var mı?", shape=diamond];
+
+    dispense [label="Para ver + fiş çıkar", shape=rectangle, style="filled", fillcolor=lightgreen];
+    update_balance [label="Bakiyeyi güncelle"];
+    another [label="Başka işlem yapmak ister misiniz?", shape=diamond];
+
+    exit [label="Kart iade edildi\nİyi günler", shape=rectangle, style="rounded,filled", fillcolor=lightgrey];
+
+    // Akışlar
+    start -> card_inserted -> card_blocked_check;
+    card_blocked_check -> blocked_exit [label="Evet"];
+    card_blocked_check -> pin_loop [label="Hayır"];
+
+    pin_loop -> pin_correct;
+    pin_correct -> menu [label="Evet"];
+    pin_correct -> pin_retry [label="Hayır"];
+    pin_retry -> card_blocked [label="3. hatalı giriş"];
+    pin_retry -> pin_loop [label="Tekrar dene"];
+
+    card_blocked -> blocked_exit;
+
+    menu -> choice;
+    choice -> balance [label="1"];
+    choice -> withdraw [label="2"];
+    choice -> exit [label="3"];
+
+    balance -> menu [label="Menüye dön"];
+
+    withdraw -> check_20;
+    check_20 -> check_balance [label="Evet"];
+    check_20 -> withdraw [label="Hayır"];
+
+    check_balance -> check_limit [label="Evet"];
+    check_balance -> withdraw [label="Hayır"];
+
+    check_limit -> check_cash [label="Evet"];
+    check_limit -> withdraw [label="Hayır"];
+
+    check_cash -> dispense [label="Evet"];
+    check_cash -> withdraw [label="Hayır"];
+
+    dispense -> update_balance -> another;
+
+    another -> menu [label="Evet"];
+    another -> exit [label="Hayır"];
+
+    blocked_exit -> exit;
+}
